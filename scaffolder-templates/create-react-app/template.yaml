@@ -1,9 +1,9 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: create-react-app-template
-  title: Create React App Template
-  description: Create a new CRA website project
+  name: create-react-app-test
+  title: Create React App Template (Sandbox Test)
+  description: Testing my forked Backstage template in the OpenShift Developer Sandbox
   tags:
     - react
     - cra
