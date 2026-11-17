@@ -1,0 +1,90 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: python-fastapi-template
+  title: Python FastAPI Microservice (Golden Path)
+  description: Scaffold a production-hardened Python FastAPI microservice with automated SBOM generation, Trivy vulnerability scanning, and OpenShift manifests.
+  tags:
+    - python
+    - fastapi
+    - ubi9
+    - golden-path
+spec:
+  owner: group:default/redhat-developer-demos
+  type: service
+
+  parameters:
+    - title: Microservice Metadata
+      required:
+        - component_id
+        - owner
+      properties:
+        component_id:
+          title: Application Name
+          type: string
+          description: Unique name of the microservice (e.g. trading-fee-service)
+          ui:field: EntityNamePicker
+          ui:autofocus: true
+          pattern: '^[a-z0-9-]+$'
+        description:
+          title: Description
+          type: string
+          description: Summary of the microservice purpose
+          default: Production-hardened Python FastAPI microservice on OpenShift
+        owner:
+          title: Owning Team
+          type: string
+          description: Team responsible for maintaining this application
+          ui:field: OwnerPicker
+          ui:options:
+            allowedKinds:
+              - Group
+
+    - title: Destination Repository
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: GitHub Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+
+  steps:
+    - id: template
+      name: Render Golden Path Skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        copyWithoutRender:
+          - .github/workflows/*
+        values:
+          component_id: ${{ parameters.component_id }}
+          description: ${{ parameters.description }}
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}
+          owner: ${{ parameters.owner }}
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        description: ${{ parameters.description }}
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: main
+
+    - id: register
+      name: Register in Software Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: "/catalog-info.yaml"
+
+  output:
+    links:
+      - title: Source Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

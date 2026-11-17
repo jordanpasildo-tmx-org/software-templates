@@ -14,3 +14,4 @@ spec:
     - ./scaffolder-templates/rails-demo/template.yaml
     - ./scaffolder-templates/react-ssr-template/template.yaml
     - ./scaffolder-templates/springboot-grpc-template/template.yaml
+    - ./scaffolder-templates/python-fastapi/template.yaml

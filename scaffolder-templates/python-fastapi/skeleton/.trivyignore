@@ -1,0 +1,16 @@
+# ==============================================================================
+# TMX Group - Trivy CVE Suppression / Allowlist Policy (.trivyignore)
+# Standard: Zero-Trust DevSecOps Exception Policy
+#
+# Every suppression entry MUST be documented with:
+# 1. The exact CVE identifier (e.g. CVE-2023-XXXXX)
+# 2. Technical Justification (e.g. vulnerable code path is unreachable / uncompiled)
+# 3. Approving Security Ticket / Architect (e.g. SEC-1042 / Platform Security)
+# 4. Mandatory Expiration Date (Exceptions expire after 30-90 days)
+# ==============================================================================
+
+# Example Entry:
+# CVE-2023-99999
+# Justification: Unused cryptographic cipher in optional utility; unreachable by application runtime.
+# Approved-By: Kyle Pryce-Jones (SEC-8921)
+# Expiry: 2026-12-31

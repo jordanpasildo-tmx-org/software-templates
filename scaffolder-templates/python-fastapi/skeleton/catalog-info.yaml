@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.component_id }}
+  description: ${{ values.description }}
+  annotations:
+    github.com/project-slug: ${{ values.destination.owner }}/${{ values.destination.repo }}
+  tags:
+    - python
+    - fastapi
+    - golden-path
+    - ubi9
+spec:
+  type: service
+  lifecycle: experimental
+  owner: ${{ values.owner }}
