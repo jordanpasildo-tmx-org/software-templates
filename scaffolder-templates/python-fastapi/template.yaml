@@ -39,6 +39,7 @@ spec:
           ui:options:
             allowedKinds:
               - Group
+              - User
 
     - title: Destination Repository
       required:
@@ -59,6 +60,7 @@ spec:
       input:
         url: ./skeleton
         copyWithoutRender:
+          - .github/**
           - .github/workflows/*
         values:
           component_id: ${{ parameters.component_id }}

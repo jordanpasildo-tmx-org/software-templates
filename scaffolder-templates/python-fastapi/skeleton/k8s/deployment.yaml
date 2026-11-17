@@ -19,7 +19,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: ${{ values.component_id }}
-          image: ghcr.io/jordanpasildo-tmx-org/${{ values.component_id }}:latest
+          image: ghcr.io/${{ values.destination.owner | lower }}/${{ values.component_id }}:latest
           imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false

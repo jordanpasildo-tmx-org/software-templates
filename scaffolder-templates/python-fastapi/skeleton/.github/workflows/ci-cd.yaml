@@ -1,3 +1,4 @@
+{% raw %}
 name: Build, SBOM, Vulnerability Scan & Publish
 
 on:
@@ -11,7 +12,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # ----------------------------------------------------------------------------
@@ -58,6 +58,10 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set lowercase image name
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
       - name: Extract Metadata (tags, labels)
         id: meta
@@ -119,3 +123,4 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+{% endraw %}
