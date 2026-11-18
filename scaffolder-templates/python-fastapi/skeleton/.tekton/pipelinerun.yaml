@@ -26,7 +26,3 @@ spec:
           resources:
             requests:
               storage: 2Gi
-    - name: registry-credentials
-      emptyDir: {}
-    - name: cosign-secret
-      emptyDir: {}
