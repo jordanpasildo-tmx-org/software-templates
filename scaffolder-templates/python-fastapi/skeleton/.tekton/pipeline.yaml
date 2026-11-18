@@ -79,12 +79,11 @@ spec:
           - name: generate-cyclonedx
             image: anchore/syft:v1.16.0
             workingDir: $(workspaces.source.path)
-            script: |
-              #!/usr/bin/env sh
-              set -eu
-              echo "==> Generating CycloneDX SBOM with Syft from source dependencies..."
-              syft dir:source/src -o cyclonedx-json=sbom.cdx.json
-              echo "==> CycloneDX SBOM successfully written to sbom.cdx.json."
+            command: ["/syft"]
+            args:
+              - "dir:source/src"
+              - "-o"
+              - "cyclonedx-json=sbom.cdx.json"
 
     # --------------------------------------------------------------------------
     # Task 3: Vulnerability Scanning (Trivy)
