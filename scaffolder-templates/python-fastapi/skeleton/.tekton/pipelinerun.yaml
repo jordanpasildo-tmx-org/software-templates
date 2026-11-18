@@ -1,0 +1,32 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: ${{ values.component_id }}-run-
+  labels:
+    app.kubernetes.io/name: ${{ values.component_id }}
+    tekton.dev/pipeline: ${{ values.component_id }}-pipeline
+spec:
+  pipelineRef:
+    name: ${{ values.component_id }}-pipeline
+  params:
+    - name: git-url
+      value: "https://github.com/${{ values.destination.owner }}/${{ values.component_id }}.git"
+    - name: git-revision
+      value: "main"
+    - name: image-name
+      value: "${{ values.component_id }}"
+    - name: image-tag
+      value: "latest"
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+    - name: registry-credentials
+      emptyDir: {}
+    - name: cosign-secret
+      emptyDir: {}

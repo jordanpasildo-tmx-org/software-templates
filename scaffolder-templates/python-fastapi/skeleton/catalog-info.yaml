@@ -5,6 +5,8 @@ metadata:
   description: ${{ values.description }}
   annotations:
     github.com/project-slug: ${{ values.destination.owner }}/${{ values.destination.repo }}
+    tekton.dev/pipeline: ${{ values.component_id }}-pipeline
+    janus-idp.io/tekton: ${{ values.component_id }}
   tags:
     - python
     - fastapi

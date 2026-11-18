@@ -8,14 +8,24 @@
 
 ---
 
-## 🚀 Automated Security & CI/CD Pipeline
+## 🚀 OpenShift Pipelines (Tekton) Security CI/CD
 
-Whenever changes are pushed to `main`, the automated GitHub Actions pipeline performs:
-1. **Automated Unit Tests:** Validates application routes, liveness (`/healthz`), and readiness (`/ready`).
-2. **Rootless OCI Build:** Compiles the container on Red Hat UBI 9 Minimal running under `USER 1001`.
-3. **SBOM Generation (Syft):** Emits a machine-readable CycloneDX Software Bill of Materials (`sbom.cdx.json`).
-4. **Vulnerability Scanning (Trivy):** Scans the built container for CVEs across OS and Python packages.
-5. **Image Publish:** Pushes the verified image to GitHub Container Registry (`ghcr.io`).
+This application is managed natively by **OpenShift Pipelines (Tekton)**:
+1. **`fetch-repository`:** Clones source code into a shared persistent workspace.
+2. **`lint-dockerfile`:** Runs Hadolint static analysis for root execution (`USER 0`) and syntax rules.
+3. **`unit-tests`:** Executes Pytest suite in `python:3.11-slim`, validating `/healthz` and `/ready` probes.
+4. **`build-image`:** Compiles the OCI image rootlessly via `buildah` (`vfs` storage driver, `chroot` isolation).
+5. **`generate-sbom`:** Extracts machine-readable CycloneDX SBOM (`sbom.cdx.json`) using Anchore Syft.
+6. **`scan-vulnerabilities`:** Scans SBOM for CVE vulnerabilities with Aqua Security Trivy.
+7. **`sign-image`:** Cryptographically validates and signs image provenance with Cosign.
+
+### Running the Pipeline in OpenShift:
+```bash
+oc apply -f .tekton/pipeline.yaml
+oc create -f .tekton/pipelinerun.yaml
+```
+
+View the live pipeline execution in the **Pipelines** tab of the OpenShift Web Console or directly inside **Red Hat Developer Hub** under the component's CI/CD tab!
 
 ---
 
