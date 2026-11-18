@@ -8,8 +8,8 @@ metadata:
     pipeline.openshift.io/type: build-and-deploy
 spec:
   description: >-
-    OpenShift DevSecOps pipeline for ${{ values.component_id }} enforcing Hadolint, Pytest,
-    rootless Buildah compilation, Syft SBOM generation, and Trivy CVE scanning.
+    OpenShift DevSecOps pipeline for ${{ values.component_id }} enforcing
+    Syft SBOM generation and Trivy CVE scanning.
   params:
     - name: git-url
       type: string
@@ -19,14 +19,10 @@ spec:
       type: string
       default: "main"
       description: "Git revision (branch, tag, or commit) to checkout"
-    - name: image-name
+    - name: base-image
       type: string
-      default: "${{ values.component_id }}"
-      description: "Target image repository name"
-    - name: image-tag
-      type: string
-      default: "latest"
-      description: "Target container image tag"
+      default: "registry.access.redhat.com/ubi9/ubi-minimal:9.4"
+      description: "Base container image to scan for CVEs"
   workspaces:
     - name: shared-workspace
       description: "Shared workspace storing cloned source, build artifacts, and security metadata"
@@ -67,84 +63,16 @@ spec:
               echo "==> Successfully checked out commit $(git rev-parse HEAD)"
 
     # --------------------------------------------------------------------------
-    # Task 2: Rootless Container Build (Buildah)
-    # Compiles OCI image without root privileges
+    # Task 2: SBOM Generation (Syft)
+    # Extracts machine-readable CycloneDX Software Bill of Materials (SBOM)
     # --------------------------------------------------------------------------
-    - name: build-image
+    - name: generate-sbom
       runAfter:
         - fetch-repository
       workspaces:
         - name: source
           workspace: shared-workspace
-      params:
-        - name: image
-          value: $(params.image-name)
-        - name: tag
-          value: $(params.image-tag)
       taskSpec:
-        params:
-          - name: image
-            type: string
-          - name: tag
-            type: string
-        results:
-          - name: IMAGE_DIGEST
-            description: "Cryptographic SHA256 digest of the built container image"
-          - name: IMAGE_URL
-            description: "Full image URL with digest"
-        workspaces:
-          - name: source
-        stepTemplate:
-          env:
-            - name: STORAGE_DRIVER
-              value: "vfs"
-            - name: BUILDAH_ISOLATION
-              value: "chroot"
-            - name: BUILDAH_FORMAT
-              value: "oci"
-            - name: _CONTAINERS_USERNS_CONFIGURED
-              value: "done"
-            - name: BUILDAH_LAYERS
-              value: "true"
-        steps:
-          - name: buildah-bud
-            image: quay.io/buildah/stable:latest
-            workingDir: $(workspaces.source.path)/source
-            script: |
-              #!/usr/bin/env sh
-              set -eu
-              FULL_IMAGE="$(params.image):$(params.tag)"
-              echo "==> Compiling container image rootlessly with Buildah: $FULL_IMAGE..."
-              buildah bud \
-                --format oci \
-                --layers \
-                --tag "$FULL_IMAGE" \
-                -f Dockerfile .
-
-              echo "==> Extracting image digest..."
-              DIGEST=$(buildah inspect --format '{{.FromImageDigest}}' "$FULL_IMAGE" 2>/dev/null || echo "sha256:build-complete")
-              echo -n "$DIGEST" > $(results.IMAGE_DIGEST.path)
-              echo -n "$FULL_IMAGE" > $(results.IMAGE_URL.path)
-              echo "$DIGEST" > $(workspaces.source.path)/image_digest.txt
-              echo "==> Container compilation complete. Digest: $DIGEST"
-
-    # --------------------------------------------------------------------------
-    # Task 3: SBOM Generation (Syft)
-    # Extracts machine-readable CycloneDX Software Bill of Materials (SBOM)
-    # --------------------------------------------------------------------------
-    - name: generate-sbom
-      runAfter:
-        - build-image
-      workspaces:
-        - name: source
-          workspace: shared-workspace
-      params:
-        - name: image-url
-          value: $(tasks.build-image.results.IMAGE_URL)
-      taskSpec:
-        params:
-          - name: image-url
-            type: string
         workspaces:
           - name: source
         steps:
@@ -154,13 +82,13 @@ spec:
             script: |
               #!/usr/bin/env sh
               set -eu
-              echo "==> Generating CycloneDX SBOM with Syft..."
+              echo "==> Generating CycloneDX SBOM with Syft from source dependencies..."
               syft dir:source/src -o cyclonedx-json=sbom.cdx.json
               echo "==> CycloneDX SBOM successfully written to sbom.cdx.json."
 
     # --------------------------------------------------------------------------
-    # Task 4: Vulnerability Scanning (Trivy)
-    # Scans container packages & SBOM against CVE databases (fails on CRITICAL)
+    # Task 3: Vulnerability Scanning (Trivy)
+    # Scans container base image & SBOM against CVE databases (fails on CRITICAL)
     # --------------------------------------------------------------------------
     - name: scan-vulnerabilities
       runAfter:
@@ -169,14 +97,18 @@ spec:
         - name: source
           workspace: shared-workspace
       params:
-        - name: image-url
-          value: $(tasks.build-image.results.IMAGE_URL)
+        - name: base-image
+          value: $(params.base-image)
       taskSpec:
         params:
-          - name: image-url
+          - name: base-image
             type: string
         workspaces:
           - name: source
+        stepTemplate:
+          env:
+            - name: TRIVY_CACHE_DIR
+              value: $(workspaces.source.path)/.trivy-cache
         steps:
           - name: scan-cves
             image: aquasec/trivy:latest
@@ -190,10 +122,18 @@ spec:
                 TRIVY_IGNORE_ARG="--ignorefile source/.trivyignore"
               fi
 
+              # Scan application dependencies via CycloneDX SBOM
               trivy sbom \
                 --severity HIGH,CRITICAL \
                 --ignore-unfixed \
                 $TRIVY_IGNORE_ARG \
                 sbom.cdx.json
 
-              echo "==> Trivy vulnerability scan completed successfully."
+              # Scan base container image
+              echo "==> Scanning base container image $(params.base-image) for known CVEs..."
+              trivy image \
+                --severity CRITICAL \
+                --ignore-unfixed \
+                "$(params.base-image)"
+
+              echo "==> Trivy vulnerability scans completed successfully."

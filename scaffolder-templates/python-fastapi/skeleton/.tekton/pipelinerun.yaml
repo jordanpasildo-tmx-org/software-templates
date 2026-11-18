@@ -13,10 +13,8 @@ spec:
       value: "https://github.com/${{ values.destination.owner }}/${{ values.component_id }}.git"
     - name: git-revision
       value: "main"
-    - name: image-name
-      value: "${{ values.component_id }}"
-    - name: image-tag
-      value: "latest"
+    - name: base-image
+      value: "registry.access.redhat.com/ubi9/ubi-minimal:9.4"
   workspaces:
     - name: shared-workspace
       volumeClaimTemplate:
