@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.component_id }}
+  description: ${{ values.description }}
+  annotations:
+    github.com/project-slug: ${{ values.destination.owner }}/${{ values.destination.repo }}
+    tekton.dev/pipeline: ${{ values.component_id }}-pipeline
+    janus-idp.io/tekton: ${{ values.component_id }}
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - react
+    - typescript
+    - frontend
+    - tekton
+spec:
+  type: website
+  lifecycle: experimental
+  owner: ${{ values.owner }}

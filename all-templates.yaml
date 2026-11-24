@@ -15,3 +15,4 @@ spec:
     - ./scaffolder-templates/react-ssr-template/template.yaml
     - ./scaffolder-templates/springboot-grpc-template/template.yaml
     - ./scaffolder-templates/python-fastapi/template.yaml
+    - ./scaffolder-templates/react-app-tekton/template.yaml

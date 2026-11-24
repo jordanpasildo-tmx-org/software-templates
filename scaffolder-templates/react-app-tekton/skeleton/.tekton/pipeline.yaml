@@ -1,0 +1,82 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: ${{ values.component_id }}-pipeline
+  labels:
+    app.kubernetes.io/name: ${{ values.component_id }}
+    app.kubernetes.io/part-of: ${{ values.component_id }}
+    pipeline.openshift.io/type: build-and-deploy
+spec:
+  description: >-
+    OpenShift pipeline for ${{ values.component_id }} (React Frontend) that clones
+    source code and deploys Kubernetes manifests directly into OpenShift Topology.
+  params:
+    - name: git-url
+      type: string
+      default: "https://github.com/${{ values.destination.owner }}/${{ values.component_id }}.git"
+      description: "Git repository clone URL"
+    - name: git-revision
+      type: string
+      default: "main"
+      description: "Git revision (branch, tag, or commit) to checkout"
+  workspaces:
+    - name: shared-workspace
+      description: "Shared workspace storing cloned source and manifests"
+
+  tasks:
+    # --------------------------------------------------------------------------
+    # Task 1: Fetch Source Repository
+    # --------------------------------------------------------------------------
+    - name: fetch-repository
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-revision)
+      taskSpec:
+        params:
+          - name: url
+            type: string
+          - name: revision
+            type: string
+        workspaces:
+          - name: output
+        steps:
+          - name: clone
+            image: alpine/git:latest
+            script: |
+              #!/usr/bin/env sh
+              set -eu
+              echo "==> Cloning repository $(params.url) (revision: $(params.revision))..."
+              rm -rf $(workspaces.output.path)/source
+              git clone $(params.url) $(workspaces.output.path)/source
+              cd $(workspaces.output.path)/source
+              git checkout $(params.revision)
+              echo "==> Successfully checked out commit $(git rev-parse HEAD)"
+
+    # --------------------------------------------------------------------------
+    # Task 2: Deploy to OpenShift Topology
+    # --------------------------------------------------------------------------
+    - name: deploy-to-openshift
+      runAfter:
+        - fetch-repository
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      taskSpec:
+        workspaces:
+          - name: source
+        steps:
+          - name: oc-deploy
+            image: quay.io/openshift/origin-cli:latest
+            workingDir: $(workspaces.source.path)/source
+            script: |
+              #!/usr/bin/env sh
+              set -eu
+              echo "==> Deploying Kubernetes manifests to OpenShift Topology..."
+              oc apply -f k8s/deployment.yaml
+              oc rollout restart deployment/${{ values.component_id }}
+              echo "==> Application successfully deployed to OpenShift Topology!"
