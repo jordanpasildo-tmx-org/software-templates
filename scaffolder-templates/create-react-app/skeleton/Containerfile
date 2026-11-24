@@ -3,6 +3,9 @@ FROM registry.access.redhat.com/ubi9/nodejs-20:latest AS builder
 
 WORKDIR /opt/app-root/src
 
+# Enable legacy OpenSSL cryptographic provider for react-scripts 4 / Webpack 4 on Node 20
+ENV NODE_OPTIONS="--openssl-legacy-provider"
+
 # Install application dependencies
 COPY package.json tsconfig.json ./
 RUN npm install
