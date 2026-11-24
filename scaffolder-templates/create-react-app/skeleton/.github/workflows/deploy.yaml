@@ -48,9 +48,23 @@ jobs:
           oc: "4.16"
 
       - name: Deploy to OpenShift Developer Sandbox
+        env:
+          PULL_TOKEN: {% raw %}${{ secrets.GHCR_PULL_TOKEN || secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}{% endraw %}
         run: |
           oc login --token="{% raw %}${{ secrets.OPENSHIFT_TOKEN }}{% endraw %}" --server="{% raw %}${{ secrets.OPENSHIFT_SERVER }}{% endraw %}" --insecure-skip-tls-verify=true
           oc project jpasildo-tmx-dev
+
+          # Automatically configure and link ghcr pull secret for seamless unprivileged pulls
+          if [ -n "$PULL_TOKEN" ]; then
+            echo "==> Configuring ghcr-pull-secret in OpenShift project jpasildo-tmx-dev..."
+            oc create secret docker-registry ghcr-pull-secret \
+              --docker-server=ghcr.io \
+              --docker-username="{% raw %}${{ github.actor }}{% endraw %}" \
+              --docker-password="$PULL_TOKEN" \
+              --dry-run=client -o yaml | oc apply -f -
+            oc secrets link default ghcr-pull-secret --for=pull || true
+          fi
+
           oc apply -f k8s/deployment.yaml
           oc rollout restart deployment/${{ values.component_id }}
           oc rollout status deployment/${{ values.component_id }} --timeout=120s

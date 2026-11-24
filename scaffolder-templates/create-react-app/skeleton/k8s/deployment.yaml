@@ -23,6 +23,8 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: ${{ values.component_id }}
           image: ghcr.io/${{ values.destination.owner | lower }}/${{ values.destination.repo | lower }}:latest
