@@ -1,57 +1,64 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: create-react-app-test
-  title: Create React App Template (Sandbox Test)
-  description: Testing my forked Backstage template in the OpenShift Developer Sandbox
+  name: create-react-app-template
+  title: React Web Application (OpenShift Sandbox)
+  description: Scaffold a React single-page frontend application with TypeScript, containerized with Red Hat UBI 9 Nginx, and deployed automatically to OpenShift Sandbox via GitHub Actions.
   tags:
     - react
-    - cra
+    - typescript
+    - frontend
+    - openshift
 spec:
-  owner: web@example.com
+  owner: group:default/redhat-developer-demos
   type: website
+
   parameters:
-    - title: Provide some simple information
+    - title: Application Metadata
       required:
         - component_id
         - owner
       properties:
         component_id:
-          title: Name
+          title: Application Name
           type: string
-          description: Unique name of the component
+          description: Unique name of the frontend application (e.g. trading-dashboard)
           ui:field: EntityNamePicker
+          ui:autofocus: true
+          pattern: '^[a-z0-9-]+$'
         description:
           title: Description
           type: string
-          description: Help others understand what this website is for.
+          description: Summary of the application purpose
+          default: React TypeScript frontend web application
         owner:
-          title: Owner
+          title: Owning Team
           type: string
-          description: Owner of the component
+          description: Team responsible for maintaining this application
           ui:field: OwnerPicker
           ui:options:
             allowedKinds:
               - Group
-    - title: Choose a location
+              - User
+
+    - title: Destination Repository
       required:
         - repoUrl
       properties:
         repoUrl:
-          title: Repository Location
+          title: GitHub Repository Location
           type: string
           ui:field: RepoUrlPicker
           ui:options:
             allowedHosts:
               - github.com
+
   steps:
     - id: template
-      name: Fetch Skeleton + Template
+      name: Render Application Skeleton
       action: fetch:template
       input:
         url: ./skeleton
-        copyWithoutRender:
-          - .github/workflows/*
         values:
           component_id: ${{ parameters.component_id }}
           description: ${{ parameters.description }}
@@ -59,14 +66,16 @@ spec:
           owner: ${{ parameters.owner }}
 
     - id: publish
-      name: Publish
+      name: Publish to GitHub
       action: publish:github
       input:
-        description: This is ${{ parameters.component_id }}
+        description: ${{ parameters.description }}
         repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: main
+        repoVisibility: public
 
     - id: register
-      name: Register
+      name: Register in Software Catalog
       action: catalog:register
       input:
         repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
@@ -74,8 +83,8 @@ spec:
 
   output:
     links:
-      - title: Repository
+      - title: Source Repository
         url: ${{ steps.publish.output.remoteUrl }}
-      - title: Open in catalog
+      - title: Open in Catalog
         icon: catalog
         entityRef: ${{ steps.register.output.entityRef }}

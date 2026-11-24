@@ -1,0 +1,56 @@
+name: Build and Deploy to OpenShift
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: {% raw %}${{ github.actor }}{% endraw %}
+          password: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
+
+      - name: Extract Image Name (Lowercase)
+        id: meta
+        run: |
+          IMAGE_NAME="ghcr.io/{% raw %}${{ github.repository }}{% endraw %}"
+          echo "image=${IMAGE_NAME,,}" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Container Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Containerfile
+          push: true
+          tags: |
+            {% raw %}${{ steps.meta.outputs.image }}:latest{% endraw %}
+            {% raw %}${{ steps.meta.outputs.image }}:${{ github.sha }}{% endraw %}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/openshift-tools-installer@v3
+        with:
+          oc: "4.16"
+
+      - name: Deploy to OpenShift Developer Sandbox
+        run: |
+          oc login --token="{% raw %}${{ secrets.OPENSHIFT_TOKEN }}{% endraw %}" --server="{% raw %}${{ secrets.OPENSHIFT_SERVER }}{% endraw %}" --insecure-skip-tls-verify=true
+          oc project jpasildo-tmx-dev
+          oc apply -f k8s/deployment.yaml
+          oc rollout restart deployment/${{ values.component_id }}
+          oc rollout status deployment/${{ values.component_id }} --timeout=120s
