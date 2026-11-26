@@ -7,6 +7,7 @@ metadata:
     app.kubernetes.io/instance: ${{ values.component_id }}
     app.kubernetes.io/part-of: ${{ values.component_id }}
     app.openshift.io/runtime: react
+    backstage.io/kubernetes-id: ${{ values.component_id }}
 spec:
   replicas: 1
   selector:
@@ -20,6 +21,7 @@ spec:
         app.kubernetes.io/instance: ${{ values.component_id }}
         app.kubernetes.io/part-of: ${{ values.component_id }}
         app.openshift.io/runtime: react
+        backstage.io/kubernetes-id: ${{ values.component_id }}
     spec:
       securityContext:
         runAsNonRoot: true
@@ -70,6 +72,7 @@ metadata:
     app.kubernetes.io/name: ${{ values.component_id }}
     app.kubernetes.io/part-of: ${{ values.component_id }}
     app.openshift.io/runtime: react
+    backstage.io/kubernetes-id: ${{ values.component_id }}
 spec:
   type: ClusterIP
   ports:
@@ -88,6 +91,7 @@ metadata:
     app.kubernetes.io/name: ${{ values.component_id }}
     app.kubernetes.io/part-of: ${{ values.component_id }}
     app.openshift.io/runtime: react
+    backstage.io/kubernetes-id: ${{ values.component_id }}
 spec:
   to:
     kind: Service
